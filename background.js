@@ -52,6 +52,7 @@ function detectMimeFromBase64(b64) {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "base64-to-file" && info.selectionText) {
     let base64 = info.selectionText.trim();
+    base64 = base64?.replaceAll("\\n","")?.replaceAll("\n","");
     const match = base64.match(/^data:([\w\-]+\/\w+);base64,(.*)$/);
     let mime = "application/octet-stream";
     let b64 = base64;
@@ -68,6 +69,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       url: dataUrl,
       filename,
       saveAs: true
+    }).catch(x => {      console.error("Download failed:", x);
     });
   }
 });
