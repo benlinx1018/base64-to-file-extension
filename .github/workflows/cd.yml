@@ -6,12 +6,13 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   package:
     runs-on: ubuntu-latest
     outputs:
+      version: ${{ steps.metadata.outputs.version }}
       artifact_name: ${{ steps.metadata.outputs.artifact_name }}
       artifact_file: ${{ steps.metadata.outputs.artifact_file }}
       publish_ready: ${{ steps.credentials.outputs.publish_ready }}
@@ -91,6 +92,35 @@ jobs:
               done
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  release:
+    runs-on: ubuntu-latest
+    needs: package
+
+    steps:
+      - name: Download packaged extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.package.outputs.artifact_name }}
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.package.outputs.version }}
+          name: v${{ needs.package.outputs.version }}
+          body: |
+            Packaged Chrome extension release for version `${{ needs.package.outputs.version }}`.
+          files: dist/${{ needs.package.outputs.artifact_file }}
+          fail_on_unmatched_files: true
+
+      - name: Write release summary
+        run: |
+          {
+            echo "## GitHub Release"
+            echo ""
+            echo "Created or updated release \`v${{ needs.package.outputs.version }}\` with artifact \`${{ needs.package.outputs.artifact_file }}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   publish:
     runs-on: ubuntu-latest
