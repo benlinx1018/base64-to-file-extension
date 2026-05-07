@@ -1,0 +1,123 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_name: ${{ steps.metadata.outputs.artifact_name }}
+      artifact_file: ${{ steps.metadata.outputs.artifact_file }}
+      publish_ready: ${{ steps.credentials.outputs.publish_ready }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate extension manifest and assets
+        run: ./scripts/validate-extension.sh
+
+      - name: Read package metadata
+        id: metadata
+        run: |
+          version="$(python3 - <<'PY'
+          import json
+          with open('manifest.json', encoding='utf-8') as fh:
+              print(json.load(fh)['version'])
+          PY
+          )"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=base64-to-file-extension-v${version}" >> "$GITHUB_OUTPUT"
+          echo "artifact_file=base64-to-file-extension-v${version}.zip" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Release metadata"
+            echo ""
+            echo "- Version: \`${version}\`"
+            echo "- Branch: \`${GITHUB_REF_NAME}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Package extension
+        id: package
+        run: |
+          artifact_path="$(./scripts/package-extension.sh)"
+          echo "artifact_path=${artifact_path}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload packaged extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.metadata.outputs.artifact_name }}
+          path: ${{ steps.package.outputs.artifact_path }}
+          if-no-files-found: error
+
+      - name: Check Chrome Web Store credentials
+        id: credentials
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: |
+          missing=()
+          for name in CHROME_EXTENSION_ID CHROME_CLIENT_ID CHROME_CLIENT_SECRET CHROME_REFRESH_TOKEN; do
+            if [[ -z "${!name}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [[ "${#missing[@]}" -eq 0 ]]; then
+            echo "publish_ready=true" >> "$GITHUB_OUTPUT"
+            {
+              echo ""
+              echo "## Publish status"
+              echo ""
+              echo "Chrome Web Store secrets detected. Publish job will run."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "publish_ready=false" >> "$GITHUB_OUTPUT"
+            {
+              echo ""
+              echo "## Publish status"
+              echo ""
+              echo "Publish job skipped because these secrets are missing:"
+              echo ""
+              for item in "${missing[@]}"; do
+                echo "- \`${item}\`"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: package
+    if: needs.package.outputs.publish_ready == 'true'
+
+    steps:
+      - name: Download packaged extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.package.outputs.artifact_name }}
+          path: dist
+
+      - name: Publish to Chrome Web Store
+        uses: mobilefirstllc/cws-publish@latest
+        with:
+          action: publish
+          client_id: ${{ secrets.CHROME_CLIENT_ID }}
+          client_secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
+          zip_file: dist/${{ needs.package.outputs.artifact_file }}
+
+      - name: Write publish summary
+        run: |
+          {
+            echo "## Publish status"
+            echo ""
+            echo "Chrome Web Store publish completed for artifact \`${{ needs.package.outputs.artifact_name }}\`."
+          } >> "$GITHUB_STEP_SUMMARY"

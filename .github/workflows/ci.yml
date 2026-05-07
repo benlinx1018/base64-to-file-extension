@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate extension manifest and assets
+        run: ./scripts/validate-extension.sh
+
+      - name: Package extension
+        id: package
+        run: |
+          artifact_path="$(./scripts/package-extension.sh)"
+          echo "artifact_path=${artifact_path}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload packaged extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-package
+          path: ${{ steps.package.outputs.artifact_path }}
+          if-no-files-found: error
