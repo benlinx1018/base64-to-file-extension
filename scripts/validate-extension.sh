@@ -49,6 +49,10 @@ files_to_check = {
     manifest["action"]["default_popup"],
 }
 
+for content_script in manifest.get("content_scripts", []):
+    for path in content_script.get("js", []):
+        files_to_check.add(path)
+
 for icon_group in (manifest.get("icons", {}), manifest.get("action", {}).get("default_icon", {})):
     for path in icon_group.values():
         files_to_check.add(path)
