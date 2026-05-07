@@ -4,7 +4,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "base64-to-file",
     title: "Base64 to File Download",
-    contexts: ["selection", "editable"]
+    contexts: ["selection", "editable", "page"]
   });
 });
 
@@ -44,31 +44,24 @@ function shouldPreferQuotedCandidate(selectionText, quotedCandidate) {
 
   return false;
 }
-async function selectBase64FromPage(tabId) {
-  if (!tabId || !chrome.scripting) {
+async function getBase64FromPage(tabId) {
+  if (!tabId) {
     return null;
   }
 
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ["shared.js", "content.js"]
+    const response = await chrome.tabs.sendMessage(tabId, {
+      type: "GET_LAST_QUOTED_BASE64"
     });
-
-    const [result] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => window.selectQuotedBase64FromFocusedEditable?.()
-    });
-
-    return result?.result || null;
+    return response?.value || null;
   } catch (error) {
-    console.error("Failed to select quoted base64 from page:", error);
+    console.error("Failed to read quoted base64 from content script:", error);
     return null;
   }
 }
 
 async function handleDownload(info, tab) {
-  const quotedCandidate = await selectBase64FromPage(tab?.id);
+  const quotedCandidate = await getBase64FromPage(tab?.id);
   let base64 = info.selectionText || "";
 
   if (shouldPreferQuotedCandidate(base64, quotedCandidate)) {
