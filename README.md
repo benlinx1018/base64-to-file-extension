@@ -43,6 +43,9 @@ Base64 To File Extension is a Chrome extension that enables users to quickly con
 ## License
 MIT
 
+## Privacy
+See [PRIVACY.md](PRIVACY.md) for the extension privacy policy.
+
 ## Contact
 For questions or feedback, please open an issue on GitHub or contact the maintainer.
 
@@ -50,6 +53,7 @@ For questions or feedback, please open an issue on GitHub or contact the maintai
 - **CI triggers:** GitHub Actions CI runs on every `pull_request` and every `push`.
 - **CD trigger:** GitHub Actions CD runs on every push to `main`.
 - **Artifact naming:** Packaged extension artifacts are named `base64-to-file-extension-v<manifest.version>.zip`.
+- **GitHub Releases:** The CD workflow creates or updates a GitHub Release tagged `v<manifest.version>` and attaches the packaged extension zip.
 - **Version source:** Release versioning is controlled only by `manifest.json` `version`.
 - **Required secrets for Chrome Web Store publishing:**
   - `CHROME_EXTENSION_ID`
