@@ -43,6 +43,9 @@ Base64 To File Extension is a Chrome extension that enables users to quickly con
 ## License
 MIT
 
+## Privacy
+See [PRIVACY.md](PRIVACY.md) for the extension privacy policy.
+
 ## Contact
 For questions or feedback, please open an issue on GitHub or contact the maintainer.
 
