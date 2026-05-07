@@ -18,11 +18,11 @@ Base64 To File Extension is a Chrome extension that enables users to quickly con
 ## Usage
 1. Select any base64 string on a webpage.
 2. Right-click and choose **Base64 to File Download** from the context menu.
-3. The extension will automatically detect the file type and download the file with the correct extension. If the type cannot be determined, the file will be named `download` without an extension.
+3. If nothing is selected, you can right-click directly inside a double-quoted base64 string in a page, input, or textarea. The extension will capture the full quoted value from the click position, including strings that are visually wrapped across multiple lines.
+4. The extension will automatically detect the file type and download the file with the correct extension. If the type cannot be determined, the file will be named `download` without an extension.
 
 ## Permissions
 - `contextMenus`: To add the custom right-click menu item.
-- `scripting`: To execute background scripts for conversion and download.
 - `downloads`: To save files directly to your device.
 
 ## Why Use This Extension?

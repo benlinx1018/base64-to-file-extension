@@ -1,27 +1,12 @@
+importScripts("shared.js");
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "base64-to-file",
     title: "Base64 to File Download",
-    contexts: ["selection"]
+    contexts: ["selection", "editable", "page"]
   });
 });
-
-function base64ToBlob(base64) {
-  const match = base64.match(/^data:([\w\-]+\/\w+);base64,(.*)$/);
-  let mime = "application/octet-stream";
-  let b64 = base64;
-  if (match) {
-    mime = match[1];
-    b64 = match[2];
-  }
-  const byteCharacters = atob(b64);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
-  }
-  const byteArray = new Uint8Array(byteNumbers);
-  return new Blob([byteArray], { type: mime });
-}
 
 function getExtension(mime) {
   const map = {
@@ -37,39 +22,89 @@ function getExtension(mime) {
   return map[mime] || "";
 }
 
-function detectMimeFromBase64(b64) {
-  // 取前幾個字元判斷常見格式
-  if (b64.startsWith("iVBORw0KGgo")) return "image/png";
-  if (b64.startsWith("/9j/")) return "image/jpeg";
-  if (b64.startsWith("R0lGOD")) return "image/gif";
-  if (b64.startsWith("JVBER")) return "application/pdf";
-  if (b64.startsWith("UEsDB")) return "application/zip";
-  if (b64.startsWith("UklGR")) return "image/tiff";
-  if (b64.startsWith("AAABAAE")) return "image/x-icon";
-  return "application/octet-stream";
+function shouldPreferQuotedCandidate(selectionText, quotedCandidate) {
+  const normalizedSelection = normalizeBase64Value(selectionText);
+  const normalizedQuoted = normalizeBase64Value(quotedCandidate);
+
+  if (!normalizedQuoted) {
+    return false;
+  }
+
+  if (!normalizedSelection) {
+    return true;
+  }
+
+  if (normalizedSelection === normalizedQuoted) {
+    return false;
+  }
+
+  if (normalizedQuoted.includes(normalizedSelection)) {
+    return normalizedQuoted.length > normalizedSelection.length;
+  }
+
+  return false;
+}
+async function getBase64FromPage(tabId) {
+  if (!tabId) {
+    return null;
+  }
+
+  try {
+    const response = await chrome.tabs.sendMessage(tabId, {
+      type: "GET_LAST_QUOTED_BASE64"
+    });
+    return response?.value || null;
+  } catch (error) {
+    console.error("Failed to read quoted base64 from content script:", error);
+    return null;
+  }
 }
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "base64-to-file" && info.selectionText) {
-    let base64 = info.selectionText.trim();
-    base64 = base64?.replaceAll("\\n","")?.replaceAll("\n","");
-    const match = base64.match(/^data:([\w\-]+\/\w+);base64,(.*)$/);
-    let mime = "application/octet-stream";
-    let b64 = base64;
-    if (match) {
-      mime = match[1];
-      b64 = match[2];
-    } else {
-      mime = detectMimeFromBase64(base64);
-    }
-    const dataUrl = `data:${mime};base64,${b64}`;
-    const ext = getExtension(mime);
-    const filename = ext ? `download.${ext}` : "download";
-    chrome.downloads.download({
+async function handleDownload(info, tab) {
+  const quotedCandidate = await getBase64FromPage(tab?.id);
+  let base64 = info.selectionText || "";
+
+  if (shouldPreferQuotedCandidate(base64, quotedCandidate)) {
+    base64 = quotedCandidate;
+  } else if (!base64) {
+    base64 = quotedCandidate;
+  }
+
+  if (!base64) {
+    console.error("No selected text or quoted base64 string found at the cursor.");
+    return;
+  }
+
+  const payload = parseBase64Payload(base64);
+  if (!payload) {
+    console.error("The detected value is empty after normalization.");
+    return;
+  }
+
+  if (!isValidBase64(payload.b64)) {
+    console.error("Invalid base64 payload.");
+    return;
+  }
+
+  const dataUrl = `data:${payload.mime};base64,${payload.b64}`;
+  const ext = getExtension(payload.mime);
+  const filename = ext ? `download.${ext}` : "download";
+
+  try {
+    await chrome.downloads.download({
       url: dataUrl,
       filename,
       saveAs: true
-    }).catch(x => {      console.error("Download failed:", x);
     });
+  } catch (error) {
+    console.error("Download failed:", error);
   }
+}
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== "base64-to-file") {
+    return;
+  }
+
+  handleDownload(info, tab);
 });
