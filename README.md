@@ -48,17 +48,3 @@ See [PRIVACY.md](PRIVACY.md) for the extension privacy policy.
 
 ## Contact
 For questions or feedback, please open an issue on GitHub or contact the maintainer.
-
-## CI/CD
-- **CI triggers:** GitHub Actions CI runs on every `pull_request` and every `push`.
-- **CD trigger:** GitHub Actions CD runs on every push to `main`.
-- **Artifact naming:** Packaged extension artifacts are named `base64-to-file-extension-v<manifest.version>.zip`.
-- **GitHub Releases:** The CD workflow creates or updates a GitHub Release tagged `v<manifest.version>` and attaches the packaged extension zip.
-- **Version source:** Release versioning is controlled only by `manifest.json` `version`.
-- **Required secrets for Chrome Web Store publishing:**
-  - `CHROME_EXTENSION_ID`
-  - `CHROME_CLIENT_ID`
-  - `CHROME_CLIENT_SECRET`
-  - `CHROME_REFRESH_TOKEN`
-- **Missing credentials behavior:** If those secrets are not configured yet, the CD workflow still packages and uploads the zip artifact, then skips the publish job and reports the missing secrets in the workflow summary.
-- **Chrome Web Store setup:** Before automated publishing can work, you need to enable the Chrome Web Store API, create OAuth credentials, and generate a refresh token. See the Chrome Web Store API guide: https://developer.chrome.com/docs/webstore/using-api
