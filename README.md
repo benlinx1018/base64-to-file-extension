@@ -18,14 +18,12 @@ Base64 To File Extension is a Chrome extension that enables users to quickly con
 ## Usage
 1. Select any base64 string on a webpage.
 2. Right-click and choose **Base64 to File Download** from the context menu.
-3. If nothing is selected, you can place the text cursor inside a double-quoted base64 string in an input or textarea. The extension will capture the full quoted value, including strings that are visually wrapped across multiple lines.
+3. If nothing is selected, you can right-click directly inside a double-quoted base64 string in a page, input, or textarea. The extension will capture the full quoted value from the click position, including strings that are visually wrapped across multiple lines.
 4. The extension will automatically detect the file type and download the file with the correct extension. If the type cannot be determined, the file will be named `download` without an extension.
 
 ## Permissions
 - `contextMenus`: To add the custom right-click menu item.
 - `downloads`: To save files directly to your device.
-- `activeTab`: To access the current tab only after the user invokes the extension from the right-click menu.
-- `scripting`: To run the local text-selection helper only on the active tab after the user's right-click action.
 
 ## Why Use This Extension?
 - **Efficiency:** Save time by converting and downloading base64 data in one click.
@@ -57,7 +55,6 @@ For questions or feedback, please open an issue on GitHub or contact the maintai
 - **Artifact naming:** Packaged extension artifacts are named `base64-to-file-extension-v<manifest.version>.zip`.
 - **GitHub Releases:** The CD workflow creates or updates a GitHub Release tagged `v<manifest.version>` and attaches the packaged extension zip.
 - **Version source:** Release versioning is controlled only by `manifest.json` `version`.
-- **Branching strategy:** `main` is the protected release branch. All changes should be made on short-lived feature or release branches, opened as pull requests into `main`, and merged only after the required `validate-and-package` CI check passes. Delete merged branches after the PR is complete.
 - **Required secrets for Chrome Web Store publishing:**
   - `CHROME_EXTENSION_ID`
   - `CHROME_CLIENT_ID`
