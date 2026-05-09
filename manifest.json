@@ -1,6 +1,6 @@
 {
   "name": "Base64 To File Extensions",
-  "description": "A simple Chrome extension that converts Base64 strings to file extensions.",
+  "description": "Convert selected base64 data into downloadable files from the right-click menu.",
   "version": "1.4",
   "manifest_version": 3,
   "permissions": [
